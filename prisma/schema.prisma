@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  MEALS
+  SNACKS
+  DESSERTS
+  DRINKS
+}
+
+model Store {
+  id          String  @id @default(cuid())
+  username    String  @unique
+  password    String
+  name        String
+  description String?
+
+  // Customization
+  brandColor  String  @default("oklch(60% 0.17 264)")
+  bannerUrl   String?
+  logoUrl     String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       Item[]
+}
+
+model Item {
+  id        String   @id @default(cuid())
+  name      String
+  description String?
+  price     Float
+  currency  String   @default("JD")
+  imageUrl  String
+  available Boolean  @default(true)
+  category  Category
+
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

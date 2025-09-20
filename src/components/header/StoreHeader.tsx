@@ -24,13 +24,12 @@ export default function StoreHeader({
     <section className="relative pt-[68px]">{/* pad for TopNav */}
       {/* Cover banner */}
       <div className="relative h-[220px] w-full overflow-hidden">
-        <Image
+        <img
           src={bannerUrl}
           alt="صورة الغلاف"
-          fill
           sizes="100vw"
           className="object-cover"
-          priority
+          
         />
 
         {/* Call button */}
@@ -43,7 +42,7 @@ export default function StoreHeader({
         {/* Status badge on card/ logo */}
         <div className="absolute -bottom-9 right-6">
           <div className="relative bg-white rounded-2xl w-[112px] h-[112px] border border-[var(--border)] flex items-center justify-center elevate-md">
-            <Image src={logoUrl} alt="الشعار" width={64} height={64} />
+            <img src={logoUrl} alt="الشعار" width={64} height={64} />
             {status === "closed" && (
               <div className="absolute -top-3 -left-3 rotate-[-20deg]">
                 <span className="badge danger">Closed</span>

@@ -1,46 +1,61 @@
-"use client";
-import React from "react";
-import TopNav from "@/components/header/TopNav";
-import StoreHeader from "@/components/header/StoreHeader";
-import Sidebar from "@/components/layout/Sidebar";
-import DeliveryBanner from "@/components/client/DeliveryBanner";
-import BranchSelector from "@/components/client/BranchSelector";
-import RatingCard from "@/components/client/RatingCard";
+import { prisma } from "@/lib/prisma";
+import ClientHome from "./ClientHome";
+import type { MenuItem as UiMenuItem } from "@/data/menu";
 
-export default function Home() {
-  const [open, setOpen] = React.useState(false);
+type DbCategory = "MEALS" | "SNACKS" | "DESSERTS" | "DRINKS";
+function mapCategoryToArabic(cat: DbCategory) {
+  switch (cat) {
+    case "MEALS":
+      return "الوجبات";
+    case "SNACKS":
+      return "سناكّي";
+    case "DESSERTS":
+      return "الحلويات";
+    case "DRINKS":
+      return "المشروبات";
+    default:
+      return "الوجبات";
+  }
+}
+
+export default async function Home() {
+  let store = null;
+  let items: UiMenuItem[] = [];
+  try {
+    store = await prisma.store.findFirst();
+    const dbItems = await prisma.item.findMany({
+      where: store ? { storeId: store.id } : undefined,
+      orderBy: { createdAt: "desc" },
+    });
+    type DbItemLite = { id: string; name: string; description: string | null; price: number; currency: string | null; imageUrl: string; available: boolean; category: DbCategory };
+    items = (dbItems as DbItemLite[]).map((it) => ({
+      id: it.id,
+      name: it.name,
+      description: it.description ?? undefined,
+      price: it.price,
+      currency: it.currency ?? "JD",
+      imageUrl: it.imageUrl,
+      available: it.available,
+      category: mapCategoryToArabic(it.category as DbCategory),
+    })) as UiMenuItem[];
+  } catch {
+    // When DATABASE_URL isn't set yet, keep first render clean by showing nothing specific.
+    items = [];
+  }
+
+  const storeLite = {
+    name: store?.name || "مطعم تجريبي",
+    description: store?.description || "طعم لا يعلى عليه",
+    bannerUrl: store?.bannerUrl || undefined,
+    logoUrl: store?.logoUrl || undefined,
+    brandColor: store?.brandColor || undefined,
+  };
+
+  const style = store?.brandColor ? ({ "--brand": store.brandColor } as React.CSSProperties) : undefined;
+
   return (
-    <main className="mx-auto max-w-screen-sm rtl">
-      <TopNav onMenu={() => setOpen(true)} />
-      <StoreHeader
-        bannerUrl="/file.svg"
-        logoUrl="/next.svg"
-        name="منيو إنوفا سوفتوير"
-        branch="طعم لا يعلى عليه"
-        status="closed"
-        opensIn="يفتح 1 بعد أيام"
-      />
-      <div className="p-6">
-        {/* Placeholder for tabs as in screenshot */}
-        <div className="mt-4 grid grid-cols-4 text-center text-[15px] text-[var(--muted)]">
-          <div className="py-3 border-b-2 border-transparent">المشروبات</div>
-          <div className="py-3 border-b-2 border-transparent">الحلويات</div>
-          <div className="py-3 border-b-2 border-transparent">سناكّي</div>
-          <div className="py-3 border-b-2 border-[var(--brand-600)] text-[var(--text)] font-bold">الوجبات</div>
-        </div>
-      </div>
-
-      <DeliveryBanner />
-      <BranchSelector />
-      <RatingCard />
-
-      <Sidebar open={open} onClose={() => setOpen(false)} title="القائمة">
-        <nav className="space-y-3">
-          <a className="block py-2 px-3 rounded hover:bg-[var(--surface-2)]" href="#">لوحة التحكم</a>
-          <a className="block py-2 px-3 rounded hover:bg-[var(--surface-2)]" href="#">الطلبات</a>
-          <a className="block py-2 px-3 rounded hover:bg-[var(--surface-2)]" href="#">الإعدادات</a>
-        </nav>
-      </Sidebar>
-    </main>
+    <div style={style}>
+      <ClientHome items={items} store={storeLite} />
+    </div>
   );
 }
