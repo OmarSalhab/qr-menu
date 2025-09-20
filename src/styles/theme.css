@@ -1,0 +1,84 @@
+/* Centralized design tokens for the whole app (client + admin)
+	 Change only --brand to switch the whole color scheme. */
+
+:root {
+	/* Primary brand color (update this one variable) */
+	--brand: oklch(60% 0.17 264); /* elegant royal blue suitable for cafes */
+
+	/* Derived brand scales */
+	--brand-950: color-mix(in oklch, var(--brand), black 72%);
+	--brand-900: color-mix(in oklch, var(--brand), black 60%);
+	--brand-800: color-mix(in oklch, var(--brand), black 48%);
+	--brand-700: color-mix(in oklch, var(--brand), black 36%);
+	--brand-600: color-mix(in oklch, var(--brand), black 24%);
+	--brand-500: var(--brand);
+	--brand-400: color-mix(in oklch, var(--brand), white 16%);
+	--brand-300: color-mix(in oklch, var(--brand), white 32%);
+	--brand-200: color-mix(in oklch, var(--brand), white 48%);
+	--brand-100: color-mix(in oklch, var(--brand), white 64%);
+	--brand-50:  color-mix(in oklch, var(--brand), white 80%);
+
+	/* Neutrals */
+	--bg: #ffffff;
+	--text: #0f172a; /* slate-900 */
+	--muted: #6b7280; /* gray-500 */
+	--border: #e5e7eb; /* gray-200 */
+
+	/* Surfaces */
+	--surface: #ffffff;
+	--surface-2: #f8fafc; /* slate-50 */
+
+	/* Radius & shadow */
+	--radius-sm: 8px;
+	--radius-md: 12px;
+	--radius-lg: 16px;
+	--shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+	--shadow-md: 0 8px 24px rgba(2, 6, 23, 0.12);
+
+	/* Focus ring */
+	--ring: color-mix(in oklch, var(--brand-500), white 30%);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #0b1020;
+		--text: #f1f5f9; /* slate-100 */
+		--muted: #94a3b8; /* slate-400 */
+		--border: #1f2937; /* gray-800 */
+		--surface: #0f172a; /* slate-900 */
+		--surface-2: #0b1220; /* deep slate */
+		--shadow-md: 0 10px 30px rgba(0,0,0,0.45);
+	}
+}
+
+/* Tailwind v4 theme tokens mapping */
+@theme inline {
+	--color-brand-50: var(--brand-50);
+	--color-brand-100: var(--brand-100);
+	--color-brand-200: var(--brand-200);
+	--color-brand-300: var(--brand-300);
+	--color-brand-400: var(--brand-400);
+	--color-brand-500: var(--brand-500);
+	--color-brand-600: var(--brand-600);
+	--color-brand-700: var(--brand-700);
+	--color-brand-800: var(--brand-800);
+	--color-brand-900: var(--brand-900);
+	--color-brand-950: var(--brand-950);
+
+	--color-bg: var(--bg);
+	--color-text: var(--text);
+	--color-muted: var(--muted);
+	--color-border: var(--border);
+	--color-surface: var(--surface);
+	--color-surface-2: var(--surface-2);
+
+	--radius-sm: var(--radius-sm);
+	--radius-md: var(--radius-md);
+	--radius-lg: var(--radius-lg);
+}
+
+/* Utility classes bound to tokens */
+.elevate-sm { box-shadow: var(--shadow-sm); }
+.elevate-md { box-shadow: var(--shadow-md); }
+.ring-brand { outline: 2px solid transparent; outline-offset: 2px; box-shadow: 0 0 0 3px var(--ring); }
+
