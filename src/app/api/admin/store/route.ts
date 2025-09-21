@@ -22,6 +22,8 @@ export async function PATCH(req: Request) {
   try {
     const { sub: storeId } = await requireAdminSession();
   const body = await req.json();
+  console.log(body);
+  
   const data: Record<string, unknown> = {};
   if ("name" in body) data["name"] = String(body.name);
   if ("description" in body) data["description"] = body.description ? String(body.description) : null;
