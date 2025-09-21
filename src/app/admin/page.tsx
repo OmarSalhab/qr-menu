@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import type { WorkingHours as WH } from "@/lib/working-hours";
@@ -144,6 +145,11 @@ function ThemePanel() {
               <input className="input w-full" placeholder="أدخل رابط مباشر للصورة" value={form.logoUrl} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} />
               <input type="file" accept="image/*" onChange={(e) => setForm({ ...form, logoFile: e.target.files?.[0] || null })} />
             </div>
+            {(form.logoFile || form.logoUrl) && (
+              <div className="mt-2 flex items-center gap-3">
+                <img src={form.logoFile ? URL.createObjectURL(form.logoFile) : form.logoUrl} alt="logo preview" className="w-20 h-20 object-cover rounded-lg border border-[var(--border)]" />
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm mb-1">صورة البانر</label>
@@ -151,6 +157,11 @@ function ThemePanel() {
               <input className="input w-full" placeholder="أدخل رابط مباشر للصورة" value={form.bannerUrl} onChange={(e) => setForm({ ...form, bannerUrl: e.target.value })} />
               <input type="file" accept="image/*" onChange={(e) => setForm({ ...form, bannerFile: e.target.files?.[0] || null })} />
             </div>
+            {(form.bannerFile || form.bannerUrl) && (
+              <div className="mt-2 flex items-center gap-3">
+                <img src={form.bannerFile ? URL.createObjectURL(form.bannerFile) : form.bannerUrl} alt="banner preview" className="w-40 h-20 object-cover rounded-lg border border-[var(--border)]" />
+              </div>
+            )}
           </div>
           {store?.brandColor && (
             <div className="rounded-lg p-3 border border-[var(--border)]" style={{ background: store.brandColor }}>
@@ -352,6 +363,11 @@ function MenuPanel() {
                 <input className="input w-full" placeholder="أدخل رابط مباشر للصورة" value={createForm.imageUrl} onChange={(e) => setCreateForm({ ...createForm, imageUrl: e.target.value })} />
                 <input type="file" accept="image/*" onChange={(e) => setCreateForm({ ...createForm, file: e.target.files?.[0] || null })} />
               </div>
+              {(createForm.file || createForm.imageUrl) && (
+                <div className="mt-2">
+                  <img src={createForm.file ? URL.createObjectURL(createForm.file) : createForm.imageUrl} alt="preview" className="w-24 h-24 object-cover rounded-lg border border-[var(--border)]" />
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm mb-1">متاح</label>
@@ -468,6 +484,11 @@ function MenuPanel() {
                 <input className="input w-full" value={editForm.imageUrl || ""} onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })} />
                 <input type="file" accept="image/*" onChange={(e) => setEditForm({ ...editForm, file: e.target.files?.[0] })} />
               </div>
+              {(editForm?.file || editForm?.imageUrl) && (
+                <div className="mt-2">
+                  <img src={editForm.file ? URL.createObjectURL(editForm.file) : (editForm.imageUrl as string)} alt="preview" className="w-24 h-24 object-cover rounded-lg border border-[var(--border)]" />
+                </div>
+              )}
               <label className="block text-sm">متاح</label>
               <input type="checkbox" className="mx-2" checked={Boolean(editForm.available)} onChange={(e) => setEditForm({ ...editForm, available: e.target.checked })} />
               <div className="flex justify-end sticky bottom-0 bg-[var(--surface)] pt-3">

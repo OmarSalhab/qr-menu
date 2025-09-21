@@ -29,7 +29,7 @@ export default function MenuList({ items = menuItems, activeCategory = "الكل
         return (
           <section key={cat} className="mb-10">
             <CategoryDivider title={cat} />
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               {list.map((item) => (
                 <ItemCard key={item.id} item={item} />
               ))}

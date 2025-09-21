@@ -17,15 +17,15 @@ export default function RatingCard() {
           ×
         </button>
 
-        <h2 dir="ltr" className="text-4xl !text-gray-800 font-extrabold text-center" >! قيمنا</h2>
-        <div className="mt-6  flex justify-center gap-6 text-4xl text-yellow-400/80">
+  <h2 dir="ltr" className="text-2xl md:text-4xl !text-gray-800 font-extrabold text-center" >! قيمنا</h2>
+  <div className="mt-6  flex justify-center gap-4 md:gap-6 text-3xl md:text-4xl text-yellow-400/80">
           {Array.from({ length: 5 }).map((_, i) => (
             <span key={i}>☆</span>
           ))}
         </div>
 
         <div dir="ltr" className="mt-7 flex justify-center">
-          <Button className="bg-[var(--brand-700)] hover:bg-[var(--brand-800)] rounded-[14px] h-12 text-xl px-8">
+          <Button className="bg-[var(--brand-700)] hover:bg-[var(--brand-800)] rounded-[14px] h-10 md:h-12 text-lg md:text-xl px-6 md:px-8">
             ! اضغط للتقييم
           </Button>
         </div>
