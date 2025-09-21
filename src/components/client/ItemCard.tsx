@@ -1,5 +1,5 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
-import Image from "next/image";
 import React from "react";
 import type { MenuItem } from "@/data/menu";
 import { useCart } from "@/contexts/CartContext";
