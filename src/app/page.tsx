@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
+export const dynamic = "force-dynamic";
 import ClientHome from "./ClientHome";
 import type { MenuItem as UiMenuItem } from "@/data/menu";
+import { computeOpenStatus, defaultWorkingHours, type WorkingHours } from "@/lib/working-hours";
 
 type DbCategory = "MEALS" | "SNACKS" | "DESSERTS" | "DRINKS";
 function mapCategoryToArabic(cat: DbCategory) {
@@ -49,12 +51,12 @@ export default async function Home() {
     bannerUrl: store?.bannerUrl || undefined,
     logoUrl: store?.logoUrl || undefined,
     brandColor: store?.brandColor || undefined,
+     timezone: store?.timezone || "Asia/Amman",
+     workingHours: (store?.workingHours as unknown as WorkingHours) || defaultWorkingHours(),
   };
 
-  const style = store?.brandColor ? ({ "--brand": store.brandColor } as React.CSSProperties) : undefined;
-
   return (
-    <div style={style}>
+    <div>
       <ClientHome items={items} store={storeLite} />
     </div>
   );

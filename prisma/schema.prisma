@@ -25,6 +25,8 @@ model Store {
   brandColor  String  @default("oklch(60% 0.17 264)")
   bannerUrl   String?
   logoUrl     String?
+  timezone    String  @default("Asia/Amman")
+  workingHours Json?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

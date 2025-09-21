@@ -35,7 +35,7 @@ export default function ItemCard({ item }: Props) {
 
       {/* Image block with robust aspect handling */}
       <div className="relative rounded-[12px] overflow-hidden shrink-0 w-[120px] h-[120px] bg-[var(--surface-2)] border border-[var(--border)]">
-        <img src={item.imageUrl} alt={item.name}  sizes="120px" className="object-cover object-center transition-transform duration-300 will-change-transform hover:scale-[1.03]" />
+        <img src={item.imageUrl} alt={item.name}   className="object-fit h-[120px] w-[120px] object-center transition-transform duration-300 will-change-transform hover:scale-[1.03]" />
         {item.available === false && (
           <div className="absolute top-2 right-2 bg-white/90 text-[var(--text)] rounded-full px-3 py-1 text-sm font-bold">نفذت الكمية !</div>
         )}

@@ -51,13 +51,26 @@ p {
 .btn.ghost {
 	background: transparent;
 	color: var(--text);
-	border-color: transparent;
+	border-color: color-mix(in oklch, var(--border), transparent 30%);
 }
 
 .card {
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-md);
+}
+/* Inputs */
+.input {
+	background: var(--input-bg);
+	color: var(--input-text);
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius-sm);
+	padding: 10px 12px;
+	outline: none;
+}
+.input:focus {
+	box-shadow: 0 0 0 3px var(--ring);
+	border-color: color-mix(in oklch, var(--brand-400), var(--input-border) 40%);
 }
 .badge {
 	display: inline-flex;

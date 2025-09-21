@@ -1,15 +1,15 @@
 "use client";
-import Image from "next/image";
 import React from "react";
+import Image from "next/image";
 import Button from "@/components/ui/Button";
+import { computeOpenStatus, type WorkingHours } from "@/lib/working-hours";
 
 type Props = {
   bannerUrl?: string;
   logoUrl?: string;
   name: string;
   branch?: string;
-  status?: "open" | "closed" | "soon";
-  opensIn?: string; // e.g., "يفتح بعد 1 أيام"
+  schedule?: { timezone: string; workingHours?: WorkingHours | null };
 };
 
 export default function StoreHeader({
@@ -17,9 +17,15 @@ export default function StoreHeader({
   logoUrl = "/vercel.svg",
   name,
   branch,
-  status = "closed",
-  opensIn,
+  schedule,
 }: Props) {
+  const open = React.useMemo(() => {
+    if (schedule?.workingHours && schedule.workingHours.length > 0) {
+      return computeOpenStatus(schedule.workingHours, schedule.timezone || "Asia/Amman");
+    }
+    return null;
+  }, [schedule?.workingHours, schedule?.timezone]);
+
   return (
     <section className="relative pt-[68px]">{/* pad for TopNav */}
       {/* Cover banner */}
@@ -28,8 +34,7 @@ export default function StoreHeader({
           src={bannerUrl}
           alt="صورة الغلاف"
           sizes="100vw"
-          className="object-cover"
-          
+          className="object-cover object-center"
         />
 
         {/* Call button */}
@@ -42,10 +47,10 @@ export default function StoreHeader({
         {/* Status badge on card/ logo */}
         <div className="absolute -bottom-9 right-6">
           <div className="relative bg-white rounded-2xl w-[112px] h-[112px] border border-[var(--border)] flex items-center justify-center elevate-md">
-            <img src={logoUrl} alt="الشعار" width={64} height={64} />
-            {status === "closed" && (
+            <img src={logoUrl} alt="الشعار" className=" rounded-2xl w-[112px] h-[112px] border border-[var(--border)]" />
+            {open && !open.isOpen && (
               <div className="absolute -top-3 -left-3 rotate-[-20deg]">
-                <span className="badge danger">Closed</span>
+                <span className="badge danger">مغلق</span>
               </div>
             )}
           </div>
@@ -54,8 +59,8 @@ export default function StoreHeader({
 
       {/* Info bar under banner */}
       <div className="px-6 mt-8">
-        {opensIn && (
-          <div className="text-[var(--muted)] text-sm">{opensIn}</div>
+        {open?.label && (
+          <div className="text-[var(--muted)] text-sm">{open.label}</div>
         )}
         <h1 className="text-3xl font-extrabold mt-2">{name}</h1>
         {branch && (
