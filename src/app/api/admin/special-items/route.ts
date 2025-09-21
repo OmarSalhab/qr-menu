@@ -3,42 +3,34 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/server-auth";
 import type { Prisma, Category } from "@prisma/client";
 
-// GET /api/admin/items
-// Query params: page=1, perPage=10, category=MEALS, minPrice, maxPrice, search
+// GET /api/admin/special-items
+// Query: page, perPage, category, activeOnly, search
 export async function GET(req: Request) {
   try {
     const { sub: storeId } = await requireAdminSession();
     const url = new URL(req.url);
     const page = Math.max(1, Number(url.searchParams.get("page") || 1));
     const perPage = Math.min(50, Math.max(1, Number(url.searchParams.get("perPage") || 10)));
-  const categoryParam = url.searchParams.get("category");
-  const category = (categoryParam as Category | null) || undefined;
-    const minPrice = url.searchParams.get("minPrice");
-    const maxPrice = url.searchParams.get("maxPrice");
+    const categoryParam = url.searchParams.get("category");
+    const category = (categoryParam as Category | null) || undefined;
+    const activeOnly = url.searchParams.get("activeOnly") === "true";
     const search = url.searchParams.get("search") || undefined;
 
-    const where: Prisma.ItemWhereInput = { storeId };
+    const now = new Date();
+    const where: Prisma.SpecialItemWhereInput = { storeId };
     if (category) where.category = category;
-    if (minPrice || maxPrice) {
-      const min = minPrice != null && minPrice !== "" ? parseFloat(minPrice) : undefined;
-      const max = maxPrice != null && maxPrice !== "" ? parseFloat(maxPrice) : undefined;
-      if (!Number.isNaN(min as number) || !Number.isNaN(max as number)) {
-        where.price = {
-          ...(min !== undefined && !Number.isNaN(min) ? { gte: min } : {}),
-          ...(max !== undefined && !Number.isNaN(max) ? { lte: max } : {}),
-        };
-      }
-    }
     if (search) where.name = { contains: search, mode: "insensitive" };
+    if (activeOnly) {
+      where.AND = [
+        { available: true },
+        { dateFrom: { lte: now } },
+        { dateTo: { gte: now } },
+      ];
+    }
 
     const [total, items] = await Promise.all([
-      prisma.item.count({ where }),
-      prisma.item.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * perPage,
-        take: perPage,
-      }),
+      prisma.specialItem.count({ where }),
+      prisma.specialItem.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * perPage, take: perPage }),
     ] as const);
 
     return NextResponse.json({ items, total, page, perPage });
@@ -49,7 +41,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/admin/items
+// POST /api/admin/special-items
 export async function POST(req: Request) {
   try {
     const { sub: storeId } = await requireAdminSession();
@@ -57,17 +49,20 @@ export async function POST(req: Request) {
     const name = String(body.name || "").trim();
     const description = body.description ? String(body.description) : null;
     const price = parseFloat(String(body.price));
+    const prevPrice = parseFloat(String(body.prevPrice));
     const currency = String(body.currency || "JD");
     const imageUrl = String(body.imageUrl || "");
     const available = Boolean(body.available ?? true);
-    const category = String(body.category) as Prisma.ItemUncheckedCreateInput["category"]; 
+    const category = String(body.category) as Category;
+    const dateFrom = new Date(String(body.dateFrom));
+    const dateTo = new Date(String(body.dateTo));
 
-    if (!name || !imageUrl || !category || !Number.isFinite(price)) {
-      return NextResponse.json({ error: "حقول مفقودة أو سعر غير صالح" }, { status: 400 });
+    if (!name || !imageUrl || !category || !Number.isFinite(price) || !Number.isFinite(prevPrice) || isNaN(dateFrom.getTime()) || isNaN(dateTo.getTime())) {
+      return NextResponse.json({ error: "حقول مفقودة أو غير صالحة" }, { status: 400 });
     }
 
-    const item = await prisma.item.create({
-      data: { name, description, price, currency, imageUrl, available, category, storeId },
+    const item = await prisma.specialItem.create({
+      data: { name, description, price, prevPrice, currency, imageUrl, available, category, dateFrom, dateTo, storeId },
     });
     return NextResponse.json({ item });
   } catch (e: unknown) {

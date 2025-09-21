@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import "./globals.css";
 import "@/styles/theme.css";
 import { makeBrandVars } from "@/lib/theme-server";
-import Sidebar from "@/components/layout/Sidebar";
+import { ToastProvider } from "@/components/ui/Toast";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +39,9 @@ export default async function RootLayout({
           ...(style || {}),
         }}
       >
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

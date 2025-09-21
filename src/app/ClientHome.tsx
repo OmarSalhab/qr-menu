@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 import React from "react";
 import TopNav from "@/components/header/TopNav";
@@ -12,7 +13,7 @@ import { CartProvider, useCart } from "@/contexts/CartContext";
 import WorkingHours from "@/components/client/WorkingHours";
 import type { WorkingHours as WH } from "@/lib/working-hours";
 import CartSidebar from "@/components/client/CartSidebar";
-import { Star, Instagram, Phone, Mail, MapPin, Clock, MessageCircle, UserRound, X as XIcon, Facebook, Ghost } from "lucide-react";
+import { Star, Instagram, Phone, Mail, MapPin, Clock, MessageCircle, UserRound, X as XIcon, Facebook, Ghost, BadgePercent } from "lucide-react";
 
 type StoreLite = {
   name: string;
@@ -23,6 +24,56 @@ type StoreLite = {
   timezone?: string | null;
   workingHours?: WH;
 };
+
+type SpecialUi = {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  prevPrice: number;
+  currency: string;
+  imageUrl: string;
+  category: MenuCategory;
+  dateFrom: string; // ISO
+  dateTo: string;   // ISO
+};
+
+function SpecialOffers({ specials, activeCategory }: { specials: SpecialUi[]; activeCategory: MenuCategory }) {
+  const filtered = specials.filter((s) => s.category === activeCategory);
+  if (filtered.length === 0) return null;
+  return (
+    <section className="px-5 mt-4">
+      <div className="flex items-center gap-2 mb-2">
+        <BadgePercent size={18} className="text-[var(--brand-600)]" />
+        <h3 className="font-extrabold">عروض خاصة</h3>
+      </div>
+      <div className="grid grid-cols-1 gap-3">
+        {filtered.map((s) => (
+          <article key={s.id} className="rounded-xl border border-[var(--border)] overflow-hidden elevate-sm bg-[var(--surface)]">
+            <div className="flex">
+              <img src={s.imageUrl} alt={s.name} className="w-28 h-28 object-cover" />
+              <div className="p-3 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="font-bold leading-tight mb-1">{s.name}</h4>
+                    {s.description && <p className="text-[var(--muted)] text-xs line-clamp-2">{s.description}</p>}
+                  </div>
+                  <div className="text-end">
+                    <div className="text-sm text-[var(--muted)] line-through">{s.prevPrice.toFixed(2)} {s.currency}</div>
+                    <div className="text-lg font-extrabold text-[var(--brand-700)]">{s.price.toFixed(2)} {s.currency}</div>
+                  </div>
+                </div>
+                <div className="mt-2 text-[var(--muted)] text-xs">
+                  صالح من {new Date(s.dateFrom).toLocaleDateString("ar-JO")} حتى {new Date(s.dateTo).toLocaleDateString("ar-JO")}
+                </div>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function FloatingCartButton() {
   const { totalCount, totalAmount, openCart } = useCart();
@@ -40,7 +91,7 @@ function FloatingCartButton() {
   );
 }
 
-function Inner({ items, store }: { items: MenuItem[]; store: StoreLite }) {
+function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite; specials: SpecialUi[] }) {
   const [open, setOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<MenuCategory>("الوجبات");
   const [showWorkingHours, setShowWorkingHours] = React.useState(false);
@@ -71,7 +122,10 @@ function Inner({ items, store }: { items: MenuItem[]; store: StoreLite }) {
 
       <DeliveryBanner />
       <BranchSelector />
-      <RatingCard />
+  <RatingCard />
+
+  {/* Special offers under review, above menu items */}
+  <SpecialOffers specials={specials} activeCategory={activeTab} />
 
       <MenuList activeCategory={activeTab} items={items} />
 
@@ -191,10 +245,10 @@ function Inner({ items, store }: { items: MenuItem[]; store: StoreLite }) {
   );
 }
 
-export default function ClientHome({ items, store }: { items: MenuItem[]; store: StoreLite }) {
+export default function ClientHome({ items, store, specials }: { items: MenuItem[]; store: StoreLite; specials: SpecialUi[] }) {
   return (
     <CartProvider items={items}>
-      <Inner items={items} store={store} />
+      <Inner items={items} store={store} specials={specials} />
     </CartProvider>
   );
 }

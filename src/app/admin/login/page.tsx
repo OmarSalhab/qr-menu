@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
 
 export default function AdminLoginPage() {
   const [username, setUsername] = React.useState("");
@@ -8,6 +9,7 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const router = useRouter();
+  const toast = useToast();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,7 +24,9 @@ export default function AdminLoginPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data.error || "فشل تسجيل الدخول");
+        toast("error", data.error || "فشل تسجيل الدخول");
       } else {
+        toast("success", "تم تسجيل الدخول بنجاح");
         router.replace("/admin");
       }
     } finally {
