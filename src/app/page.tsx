@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 import ClientHome from "./ClientHome";
 import type { MenuItem as UiMenuItem } from "@/data/menu";
-import { computeOpenStatus, defaultWorkingHours, type WorkingHours } from "@/lib/working-hours";
+import { defaultWorkingHours, type WorkingHours } from "@/lib/working-hours";
 
 type DbCategory = "MEALS" | "SNACKS" | "DESSERTS" | "DRINKS";
 function mapCategoryToArabic(cat: DbCategory) {
@@ -45,14 +45,20 @@ export default async function Home() {
     items = [];
   }
 
+  // Access optional fields defensively to avoid type errors on environments where the Prisma client
+  // schema hasn't yet included these fields (e.g., migration timing in CI/build).
+  const storeAny = store as unknown as { timezone?: string; workingHours?: unknown } | null;
+  const timezone = storeAny?.timezone ?? "Asia/Amman";
+  const workingHours = (storeAny?.workingHours as WorkingHours | undefined) ?? defaultWorkingHours();
+
   const storeLite = {
     name: store?.name || "مطعم تجريبي",
     description: store?.description || "طعم لا يعلى عليه",
     bannerUrl: store?.bannerUrl || undefined,
     logoUrl: store?.logoUrl || undefined,
     brandColor: store?.brandColor || undefined,
-     timezone: store?.timezone || "Asia/Amman",
-     workingHours: (store?.workingHours as unknown as WorkingHours) || defaultWorkingHours(),
+    timezone,
+    workingHours,
   };
 
   return (

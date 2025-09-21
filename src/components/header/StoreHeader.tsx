@@ -1,6 +1,6 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 import React from "react";
-import Image from "next/image";
 import Button from "@/components/ui/Button";
 import { computeOpenStatus, type WorkingHours } from "@/lib/working-hours";
 
