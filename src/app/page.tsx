@@ -68,6 +68,17 @@ export default async function Home() {
   const storeAny = store as unknown as { timezone?: string; workingHours?: unknown } | null;
   const timezone = storeAny?.timezone ?? "Asia/Amman";
   const workingHours = (storeAny?.workingHours as WorkingHours | undefined) ?? defaultWorkingHours();
+  const storeExtra = store as unknown as {
+    googleReviewsUrl?: string | null;
+    instagramUrl?: string | null;
+    whatsappUrl?: string | null;
+    xUrl?: string | null;
+    facebookUrl?: string | null;
+    googleMapsUrl?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    website?: string | null;
+  } | null;
 
   const storeLite = {
     name: store?.name || "مطعم تجريبي",
@@ -77,6 +88,16 @@ export default async function Home() {
     brandColor: store?.brandColor || undefined,
     timezone,
     workingHours,
+    // Optional social/contact fields (may not exist in schema yet). Keep null/undefined to trigger fallbacks client-side.
+    googleReviewsUrl: storeExtra?.googleReviewsUrl ?? null,
+    instagramUrl: storeExtra?.instagramUrl ?? null,
+    whatsappUrl: storeExtra?.whatsappUrl ?? null,
+    xUrl: storeExtra?.xUrl ?? null,
+    facebookUrl: storeExtra?.facebookUrl ?? null,
+    googleMapsUrl: storeExtra?.googleMapsUrl ?? null,
+    phone: storeExtra?.phone ?? null,
+    email: storeExtra?.email ?? null,
+    website: storeExtra?.website ?? null,
   };
 
   return (

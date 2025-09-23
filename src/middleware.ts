@@ -20,13 +20,15 @@ export async function middleware(req: NextRequest) {
 
   const requestHeaders = new Headers(req.headers);
 
-  // Hybrid theming: fetch brandColor from internal API and forward as a header
+  // Hybrid theming: fetch brandColor + themeMode + fontStyle and forward as headers
   try {
     const brandUrl = new URL("/api/brand", req.url);
     const r = await fetch(brandUrl.toString(), { cache: "no-store", headers: { "x-mw": "1" } });
     if (r.ok) {
-      const data = (await r.json()) as { brandColor: string | null };
+      const data = (await r.json()) as { brandColor: string | null; themeMode?: "LIGHT" | "DARK"; fontStyle?: "CLASSIC" | "ELEGANT" };
       if (data.brandColor) requestHeaders.set("x-brand", data.brandColor);
+      if (data.themeMode) requestHeaders.set("x-theme", data.themeMode);
+      if (data.fontStyle) requestHeaders.set("x-font", data.fontStyle);
     }
   } catch {
     // ignore, fallback to default CSS brand

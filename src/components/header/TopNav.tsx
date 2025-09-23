@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import Button from "@/components/ui/Button";
+import { getFallbackLink } from "@/lib/links";
 
 type TopNavProps = {
   onMenu: () => void;
@@ -21,7 +22,7 @@ export default function TopNav({ onMenu }: TopNavProps) {
           </Button>
 
           <a
-            href="#bookings"
+            href={getFallbackLink("bookings")}
             className="badge brand text-sm elevate-sm border bg-[var(--brand-600)] text-white hover:opacity-95"
           >
             الحجوزات ◴

@@ -14,6 +14,7 @@ import WorkingHours from "@/components/client/WorkingHours";
 import type { WorkingHours as WH } from "@/lib/working-hours";
 import CartSidebar from "@/components/client/CartSidebar";
 import { Star, Instagram, Phone, Mail, MapPin, Clock, MessageCircle, UserRound, X as XIcon, Facebook, Ghost, BadgePercent } from "lucide-react";
+import { getFallbackLink } from "@/lib/links";
 
 type StoreLite = {
   name: string;
@@ -23,6 +24,16 @@ type StoreLite = {
   brandColor?: string | null;
   timezone?: string | null;
   workingHours?: WH;
+  // Optional social/contact links that may or may not exist in the DB yet
+  googleReviewsUrl?: string | null;
+  instagramUrl?: string | null;
+  whatsappUrl?: string | null;
+  xUrl?: string | null; // Twitter/X
+  facebookUrl?: string | null;
+  googleMapsUrl?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
 };
 
 type SpecialUi = {
@@ -81,11 +92,11 @@ function FloatingCartButton() {
   return (
     <button
       onClick={openCart}
-      className="fixed bottom-6 left-6 rounded-full bg-[var(--brand-700)] text-white h-14 px-5 elevate-md shadow-lg flex items-center gap-3 z-40"
+      className="fixed bottom-4 !text-sm left-4 rounded-full bg-[var(--brand-700)] text-white h-10 px-4 elevate-md shadow-lg flex items-center gap-3 z-40"
       aria-label="فتح الحاسبة"
     >
-      <span>السلة</span>
-      <span className="font-extrabold">{totalCount}</span>
+      <span>الفاتورة</span>
+      {/* <span className="font-extrabold">{totalCount}</span> */}
       <span className="opacity-90 text-sm">{totalAmount.toFixed(2)} JD</span>
     </button>
   );
@@ -150,7 +161,7 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
             </div>
           )}
 
-          <a href="#reviews" className="block">
+          <a href={store.googleReviewsUrl || getFallbackLink("googleReviews")} target="_blank" className="block">
             <div className=" rounded-[999px] ps-6 pe-10 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] relative hover:border-[var(--brand-400)] transition-colors">
               <div className="absolute -start-2 -top-2 w-10 h-10 rounded-[999px] bg-[var(--surface)] border border-[var(--border)] grid place-items-center">
                 <Star size={18} className="text-yellow-500 fill-amber-300" />
@@ -158,7 +169,7 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
               <span className="font-semibold mx-4">تقييم المحل</span>
             </div>
           </a>
-          <a href="#" className="block">
+          <a href={store.instagramUrl || getFallbackLink("instagram")} target="_blank" className="block">
             <div className="rounded-[999px] ps-6 pe-10 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] relative hover:border-[var(--brand-400)] transition-colors">
                 <div className="absolute -start-2 -top-2 w-10 h-10 rounded-[999px] bg-[var(--surface)] border border-[var(--border)] grid place-items-center">
                 <div className="bg-gradient-to-bl from-pink-500 via-purple-600 to-orange-500  rounded-xl">
@@ -168,7 +179,7 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
               <span className="font-semibold mx-4">انستاغرام</span>
             </div>
           </a>
-          <a href="#" className="block">
+          <a href={store.whatsappUrl || getFallbackLink("whatsapp")} target="_blank" className="block">
             <div className="rounded-[999px] ps-6 pe-10 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] relative hover:border-[var(--brand-400)] transition-colors">
               <div className="absolute -start-2 -top-2 w-10 h-10 rounded-[999px] bg-[var(--surface)] border border-[var(--border)] grid place-items-center">
                 <MessageCircle size={18} className="text-[#25D366]" />
@@ -176,7 +187,7 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
               <span className="font-semibold mx-4">واتسآب</span>
             </div>
           </a>
-          <a href="#" className="block">
+          <a href={store.xUrl || getFallbackLink("x")} target="_blank" className="block">
             <div className="rounded-[999px] ps-6 pe-10 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] relative hover:border-[var(--brand-400)] transition-colors">
               <div className="absolute -start-2 -top-2 w-10 h-10 rounded-[999px] bg-[var(--surface)] border border-[var(--border)] grid place-items-center">
                 <XIcon size={18} className="text-white" />
@@ -184,7 +195,7 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
               <span className="font-semibold mx-4">تويتر (X)</span>
             </div>
           </a>
-          <a href="#" className="block">
+          <a href={getFallbackLink("snapchat")} target="_blank" className="block">
             <div className="rounded-[999px] ps-6 pe-10 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] relative hover:border-[var(--brand-400)] transition-colors">
               <div className="absolute -start-2 -top-2 w-10 h-10 rounded-[999px] bg-[var(--surface)] border border-[var(--border)] grid place-items-center">
                 <Ghost size={18} className="text-[#FFFC00] " />
@@ -192,7 +203,7 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
               <span className="font-semibold mx-4">سناب شات</span>
             </div>
           </a>
-          <a href="#" className="block">
+          <a href={store.facebookUrl || getFallbackLink("facebook")} target="_blank" className="block">
             <div className="rounded-[999px] ps-6 pe-10 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] relative hover:border-[var(--brand-400)] transition-colors">
               <div className="absolute -start-2 -top-2 w-10 h-10 rounded-[999px] bg-[var(--surface)] border border-[var(--border)] grid place-items-center">
                 <div className="bg-gradient-to-bl from-blue-500 via-blue-600 to-blue-500 p-1 rounded-lg">
@@ -202,7 +213,7 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
               <span className="font-semibold mx-4">فيسبوك</span>
             </div>
           </a>
-          <a href="tel:+962" className="block">
+          <a href={store.phone ? `tel:${store.phone}` : getFallbackLink("phone")} className="block">
             <div className="rounded-[999px] ps-6 pe-10 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] relative hover:border-[var(--brand-400)] transition-colors">
               <div className="absolute -start-2 -top-2 w-10 h-10 rounded-[999px] bg-[var(--surface)] border border-[var(--border)] grid place-items-center">
                 <Phone size={18} className="text-[var(--muted)]" />
@@ -210,7 +221,7 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
               <span className="font-semibold mx-4">تلفون</span>
             </div>
           </a>
-          <a href="mailto:info@example.com" className="block">
+          <a href={store.email ? `mailto:${store.email}` : getFallbackLink("email")} className="block">
             <div className="rounded-[999px] ps-6 pe-10 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] relative hover:border-[var(--brand-400)] transition-colors">
               <div className="absolute -start-2 -top-2 w-10 h-10 rounded-[999px] bg-[var(--surface)] border border-[var(--border)] grid place-items-center">
                 <Mail size={18} className="text-[var(--muted)]" />
@@ -218,7 +229,7 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
               <span className="font-semibold mx-4">إيميل</span>
             </div>
           </a>
-          <a href="#" className="block">
+          <a href={store.googleMapsUrl || getFallbackLink("maps")} target="_blank" className="block">
             <div className="rounded-[999px] ps-6 pe-10 py-3 bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] relative hover:border-[var(--brand-400)] transition-colors">
               <div className="absolute -start-2 -top-2 w-10 h-10 rounded-[999px] bg-[var(--surface)] border border-[var(--border)] grid place-items-center">
                 <MapPin size={18} className="text-[var(--muted)]" />

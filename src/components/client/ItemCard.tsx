@@ -14,13 +14,13 @@ export default function ItemCard({ item }: Props) {
   <article className="grid grid-cols-[1fr_96px] md:grid-cols-[1fr_120px] gap-3 md:gap-4 px-4 md:px-5">
       {/* Text block */}
       <div className="flex flex-col justify-center">
-  <h3 className="text-lg md:text-xl font-extrabold leading-tight">{item.name}</h3>
+  <h3 className="text-[15px] md:text-xl font-extrabold leading-tight">{item.name}</h3>
         {item.description && (
-          <p className="text-[var(--muted)] mt-1 text-[12px] md:text-[13px]">{item.description}</p>
+          <p className="text-[var(--muted)] mt-1 text-[10px] md:text-[13px]">{item.description}</p>
         )}
-        <div className="mt-2 text-xl md:text-2xl font-extrabold">
+        <div className="mt-2 text-lg md:text-2xl font-extrabold">
           {item.price.toFixed(2)}
-          <span className="text-xs md:text-sm font-extrabold align-super mr-1">{item.currency ?? "JD"}</span>
+          <span className="text-[12px] md:text-sm font-extrabold align-super mr-1">{item.currency ?? "JD"}</span>
         </div>
         <div className="mt-3">
           <button

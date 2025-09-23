@@ -45,7 +45,7 @@ export default function AdminPage() {
 function ThemePanel() {
   const [loading, setLoading] = useState(true);
   const [store, setStore] = useState<Store | null>(null);
-  const [form, setForm] = useState<{ name: string; description: string; brandColor: string; bannerUrl: string; logoUrl: string; timezone: string; workingHours: WH | null; logoFile?: File | null; bannerFile?: File | null }>({ name: "", description: "", brandColor: "", bannerUrl: "", logoUrl: "", timezone: "Asia/Amman", workingHours: null, logoFile: null, bannerFile: null });
+  const [form, setForm] = useState<{ name: string; description: string; brandColor: string; bannerUrl: string; logoUrl: string; timezone: string; workingHours: WH | null; themeMode: "LIGHT" | "DARK"; fontStyle: "CLASSIC" | "ELEGANT"; logoFile?: File | null; bannerFile?: File | null }>({ name: "", description: "", brandColor: "", bannerUrl: "", logoUrl: "", timezone: "Asia/Amman", workingHours: null, themeMode: "LIGHT", fontStyle: "CLASSIC", logoFile: null, bannerFile: null });
   const toast = useToast();
 
   useEffect(() => {
@@ -65,6 +65,8 @@ function ThemePanel() {
         logoUrl: data.store.logoUrl || "",
         timezone: data.store.timezone || "Asia/Amman",
         workingHours: (data.store.workingHours as WH) || null,
+        themeMode: (data.store.themeMode as "LIGHT" | "DARK") || "LIGHT",
+        fontStyle: (data.store.fontStyle as "CLASSIC" | "ELEGANT") || "CLASSIC",
       });
       setLoading(false);
     })();
@@ -82,12 +84,20 @@ function ThemePanel() {
     return data.url as string;
   }
 
+  // Apply local preview when toggling (without persisting yet)
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", form.themeMode.toLowerCase());
+      document.documentElement.setAttribute("data-font", form.fontStyle.toLowerCase());
+    }
+  }, [form.themeMode, form.fontStyle]);
+
   async function save() {
     setLoading(true);
     // Upload files only when saving
     const logoUrlFinal = (await maybeUpload(form.logoFile || null)) || form.logoUrl;
     const bannerUrlFinal = (await maybeUpload(form.bannerFile || null)) || form.bannerUrl;
-    const payload: { name: string; description: string; brandColor: string; bannerUrl: string; logoUrl: string; timezone: string; workingHours: WH | null } = {
+    const payload: { name: string; description: string; brandColor: string; bannerUrl: string; logoUrl: string; timezone: string; workingHours: WH | null; themeMode: "LIGHT" | "DARK"; fontStyle: "CLASSIC" | "ELEGANT" } = {
       name: form.name,
       description: form.description,
       brandColor: form.brandColor,
@@ -95,12 +105,19 @@ function ThemePanel() {
       logoUrl: logoUrlFinal,
       timezone: form.timezone,
       workingHours: form.workingHours,
+      themeMode: form.themeMode,
+      fontStyle: form.fontStyle,
     };
   const res = await fetch("/api/admin/store", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
       setStore(data.store);
+      // Ensure immediate reflection across current page as well
+      if (typeof document !== "undefined") {
+        document.documentElement.setAttribute("data-theme", form.themeMode.toLowerCase());
+        document.documentElement.setAttribute("data-font", form.fontStyle.toLowerCase());
+      }
       toast("success", "تم حفظ التعديلات");
     } else {
       const data = await res.json().catch(() => ({}));
@@ -130,6 +147,34 @@ function ThemePanel() {
           <div>
             <label className="block text-sm mb-1">اللون الرئيسي (CSS oklch أو hex)</label>
             <input className="input w-full" value={form.brandColor} onChange={(e) => setForm({ ...form, brandColor: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm mb-1">وضع الواجهة</label>
+              <div className="flex items-center gap-3">
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input type="radio" name="themeMode" checked={form.themeMode === "LIGHT"} onChange={() => setForm({ ...form, themeMode: "LIGHT" })} />
+                  نهاري (فاتح)
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input type="radio" name="themeMode" checked={form.themeMode === "DARK"} onChange={() => setForm({ ...form, themeMode: "DARK" })} />
+                  ليلي (داكن)
+                </label>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm mb-1">الخط</label>
+              <div className="flex items-center gap-3">
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input type="radio" name="fontStyle" checked={form.fontStyle === "CLASSIC"} onChange={() => setForm({ ...form, fontStyle: "CLASSIC" })} />
+                  كلاسيكي
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input type="radio" name="fontStyle" checked={form.fontStyle === "ELEGANT"} onChange={() => setForm({ ...form, fontStyle: "ELEGANT" })} />
+                  أنيق (مناسب للمقاهي)
+                </label>
+              </div>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>

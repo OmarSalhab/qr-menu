@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { getFallbackLink } from "@/lib/links";
 import { branches as defaultBranches, Branch } from "@/data/branches";
 
 function ChevronDown({ className = "" }: { className?: string }) {
@@ -15,11 +16,11 @@ export function BranchCard({ branch }: { branch: Branch }) {
           <div>{branch.name}</div>
           <div>📍</div>
         </div>
-        <a href={branch.gmapsUrl} target="_blank" className="h-12 rounded-full border border-[var(--border)] flex items-center justify-between px-4 text-lg">
+          <a href={branch.gmapsUrl || getFallbackLink("maps")} target="_blank" className="h-12 rounded-full border border-[var(--border)] flex items-center justify-between px-4 text-lg">
           <div>الموقع على قوقل ماب</div>
           <div>🅖</div>
         </a>
-        <a href={`tel:${branch.phone}`} className="h-12 rounded-full border border-[var(--border)] flex items-center justify-between px-4 text-lg">
+        <a href={branch.phone ? `tel:${branch.phone}` : getFallbackLink("phone")} className="h-12 rounded-full border border-[var(--border)] flex items-center justify-between px-4 text-lg">
           <div>{branch.phone}</div>
           <div>📞</div>
         </a>

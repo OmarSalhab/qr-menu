@@ -13,11 +13,13 @@ export async function GET() {
     const store = await prisma.store.findUnique({ where: { id: storeId } });
     if (!store) return NextResponse.json({ error: "غير موجود" }, { status: 404 });
     // Provide defaults if fields are missing (e.g., production DB not migrated/seeding not applied)
-    const s = store as unknown as { timezone?: string; workingHours?: unknown };
+    const s = store as unknown as { timezone?: string; workingHours?: unknown; themeMode?: "LIGHT" | "DARK"; fontStyle?: "CLASSIC" | "ELEGANT" };
     const out = {
       ...store,
       timezone: (s?.timezone as string | undefined) ?? "Asia/Amman",
       workingHours: (s?.workingHours as WorkingHours | undefined) ?? defaultWorkingHours(),
+      themeMode: (s?.themeMode as "LIGHT" | "DARK" | undefined) ?? "LIGHT",
+      fontStyle: (s?.fontStyle as "CLASSIC" | "ELEGANT" | undefined) ?? "CLASSIC",
     };
     return NextResponse.json({ store: out });
   } catch (e: unknown) {
@@ -47,6 +49,14 @@ export async function PATCH(req: Request) {
   if ("logoUrl" in b) data["logoUrl"] = b.logoUrl ? String(b.logoUrl) : null;
   if ("timezone" in b) data["timezone"] = String((b.timezone as string) || "Asia/Amman");
   if ("workingHours" in b) data["workingHours"] = b.workingHours as unknown;
+  if ("themeMode" in b) {
+    const v = String(b.themeMode).toUpperCase();
+    if (v === "LIGHT" || v === "DARK") data["themeMode"] = v;
+  }
+  if ("fontStyle" in b) {
+    const v = String(b.fontStyle).toUpperCase();
+    if (v === "CLASSIC" || v === "ELEGANT") data["fontStyle"] = v;
+  }
   const store = await prisma.store.update({ where: { id: storeId }, data: data as unknown as Prisma.StoreUpdateInput });
     return NextResponse.json({ store });
   } catch (e: unknown) {
