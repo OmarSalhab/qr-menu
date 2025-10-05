@@ -7,11 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Legacy enum Category retained temporarily for backward compatibility during migration.
 enum Category {
   MEALS
   SNACKS
   DESSERTS
   DRINKS
+}
+
+// New dynamic category model. After refactor completes and all code switches to this,
+// we will drop the legacy enum field from Item/SpecialItem.
+model CategoryModel {
+  id          String   @id @default(cuid())
+  name        String   // internal name / slug-like (unique per store)
+  display     String   // Arabic display label
+  order       Int      @default(0)
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items       Item[]    @relation("CategoryModelItems")
+  specialItems SpecialItem[] @relation("CategoryModelSpecialItems")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([storeId, name])
+  @@index([storeId, order])
 }
 
 enum ThemeMode {
@@ -45,6 +64,7 @@ model Store {
 
   items       Item[]
   specialItems SpecialItem[]
+  categories  CategoryModel[]
 }
 
 model Item {
@@ -55,7 +75,9 @@ model Item {
   currency  String   @default("JD")
   imageUrl  String
   available Boolean  @default(true)
-  category  Category
+  category  Category        // legacy enum (to be removed)
+  categoryId String?        // new dynamic category relation (nullable until migration finishes)
+  categoryRef CategoryModel? @relation("CategoryModelItems", fields: [categoryId], references: [id])
 
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -72,7 +94,9 @@ model SpecialItem {
   prevPrice   Float
   currency    String   @default("JD")
   imageUrl    String
-  category    Category
+  category    Category         // legacy enum (to be removed)
+  categoryId  String?
+  categoryRef CategoryModel? @relation("CategoryModelSpecialItems", fields: [categoryId], references: [id])
   dateFrom    DateTime
   dateTo      DateTime
   available   Boolean  @default(true)

@@ -1,63 +1,53 @@
 import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 import ClientHome from "./ClientHome";
-import type { MenuItem as UiMenuItem } from "@/data/menu";
 import { defaultWorkingHours, type WorkingHours } from "@/lib/working-hours";
-
-type DbCategory = "MEALS" | "SNACKS" | "DESSERTS" | "DRINKS";
-function mapCategoryToArabic(cat: DbCategory) {
-  switch (cat) {
-    case "MEALS":
-      return "الوجبات";
-    case "SNACKS":
-      return "سناكّي";
-    case "DESSERTS":
-      return "الحلويات";
-    case "DRINKS":
-      return "المشروبات";
-    default:
-      return "الوجبات";
-  }
-}
 
 export default async function Home() {
   let store = null;
-  let items: UiMenuItem[] = [];
-  let specials: Array<{ id: string; name: string; description?: string; price: number; prevPrice: number; currency: string; imageUrl: string; category: UiMenuItem["category"]; dateFrom: string; dateTo: string; }> = [];
+  // Use optional description/currency for alignment with client component expectations
+  let items: Array<{ id: string; name: string; description?: string; price: number; currency?: string; imageUrl: string; available: boolean; categoryId: string | null; }> = [];
+  let specials: Array<{ id: string; name: string; description?: string; price: number; prevPrice: number; currency?: string; imageUrl: string; categoryId: string | null; dateFrom: string; dateTo: string; }> = [];
+  let categories: Array<{ id: string; display: string }> = [];
   try {
     store = await prisma.store.findFirst();
     const dbItems = await prisma.item.findMany({
       where: store ? { storeId: store.id } : undefined,
       orderBy: { createdAt: "desc" },
+      include: { categoryRef: true },
     });
-    type DbItemLite = { id: string; name: string; description: string | null; price: number; currency: string | null; imageUrl: string; available: boolean; category: DbCategory };
-    items = (dbItems as DbItemLite[]).map((it) => ({
+    items = dbItems.map(it => ({
       id: it.id,
       name: it.name,
       description: it.description ?? undefined,
       price: it.price,
-      currency: it.currency ?? "JD",
+      currency: it.currency ?? 'JD',
       imageUrl: it.imageUrl,
       available: it.available,
-      category: mapCategoryToArabic(it.category as DbCategory),
-    })) as UiMenuItem[];
+      categoryId: it.categoryId || null,
+    }));
     const now = new Date();
     const dbSpecials = await prisma.specialItem.findMany({
       where: store ? { storeId: store.id, available: true, dateFrom: { lte: now }, dateTo: { gte: now } } : undefined,
       orderBy: { createdAt: "desc" },
     });
-    specials = dbSpecials.map((s) => ({
+    specials = dbSpecials.map(s => ({
       id: s.id,
       name: s.name,
       description: s.description ?? undefined,
       price: s.price,
       prevPrice: s.prevPrice,
-      currency: s.currency ?? "JD",
+      currency: s.currency ?? 'JD',
       imageUrl: s.imageUrl,
-      category: mapCategoryToArabic(s.category as DbCategory) as UiMenuItem["category"],
+      categoryId: s.categoryId || null,
       dateFrom: s.dateFrom.toISOString(),
       dateTo: s.dateTo.toISOString(),
     }));
+    const dbCategories = await prisma.categoryModel.findMany({
+      where: store ? { storeId: store.id } : undefined,
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+    });
+    categories = dbCategories.map(c => ({ id: c.id, display: c.display }));
   } catch {
     // When DATABASE_URL isn't set yet, keep first render clean by showing nothing specific.
     items = [];
@@ -102,7 +92,7 @@ export default async function Home() {
 
   return (
     <div>
-      <ClientHome items={items} store={storeLite} specials={specials} />
+  <ClientHome items={items} store={storeLite} specials={specials as any} categories={categories} />
     </div>
   );
 }

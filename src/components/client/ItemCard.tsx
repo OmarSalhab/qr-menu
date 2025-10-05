@@ -1,12 +1,19 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 import React from "react";
-import type { MenuItem } from "@/data/menu";
+// Support dynamic menu items coming from the database.
+export interface BasicMenuItem {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  currency?: string | null;
+  imageUrl: string;
+  available?: boolean | null;
+}
 import { useCart } from "@/contexts/CartContext";
 
-type Props = {
-  item: MenuItem;
-};
+type Props = { item: BasicMenuItem };
 
 export default function ItemCard({ item }: Props) {
   const { add, openCart } = useCart();

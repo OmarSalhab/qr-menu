@@ -272,27 +272,96 @@ function ThemePanel() {
   );
 }
 
-type ItemsResponse = { items: Item[]; total: number; page: number; perPage: number };
+type AdminItem = Item & { categoryName: string | null };
+type ItemsResponse = { items: AdminItem[]; total: number; page: number; perPage: number };
+interface CatDTO { id: string; name: string; display: string; order: number; counts?: { items: number; specialItems: number } }
 
 function MenuPanel() {
-  const [items, setItems] = useState<Item[]>([]);
+  const toast = useToast();
+  const [categories, setCategories] = useState<CatDTO[]>([]);
+  const [catLoading, setCatLoading] = useState(false);
+  const [newCat, setNewCat] = useState<{ display: string; order: string }>({ display: "", order: "" });
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editingCatData, setEditingCatData] = useState<{ display: string; order: string }>({ display: "", order: "" });
+
+  const [items, setItems] = useState<AdminItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState<{ category?: Category; minPrice?: string; maxPrice?: string; search?: string }>({});
+  const [filters, setFilters] = useState<{ categoryId?: string; minPrice?: string; maxPrice?: string; search?: string }>({});
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", price: "", currency: "JD", imageUrl: "", file: null as File | null, available: true, category: "MEALS" as Category, description: "" });
-  const [editItem, setEditItem] = useState<Item | null>(null);
-  const [editForm, setEditForm] = useState<(Partial<Item> & { file?: File })>({});
-  const toast = useToast();
+  const [createForm, setCreateForm] = useState({ name: "", price: "", currency: "JD", imageUrl: "", file: null as File | null, available: true, categoryId: "", description: "" });
+  const [editItem, setEditItem] = useState<AdminItem | null>(null);
+  const [editForm, setEditForm] = useState<Partial<AdminItem> & { file?: File; categoryId?: string }>({});
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / perPage)), [total, perPage]);
 
+  // Categories CRUD
+  const loadCategories = React.useCallback(async () => {
+    setCatLoading(true);
+    const res = await fetch("/api/admin/categories?includeCounts=true", { cache: "no-store" });
+    setCatLoading(false);
+    if (res.ok) {
+      const data = await res.json();
+      setCategories(data.categories as CatDTO[]);
+      // Ensure create form default categoryId
+      setCreateForm(cf => ({ ...cf, categoryId: cf.categoryId || (data.categories[0]?.id || "") }));
+    } else {
+      toast("error", "فشل تحميل الفئات");
+    }
+  }, [toast]);
+
+  useEffect(() => { loadCategories(); }, [loadCategories]);
+
+  async function addCategory() {
+    if (!newCat.display.trim()) { toast("error", "اسم الفئة مطلوب"); return; }
+    const body: Record<string, unknown> = { display: newCat.display.trim() };
+    if (newCat.order) body.order = parseInt(newCat.order, 10);
+    const res = await fetch("/api/admin/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (res.ok) {
+      setNewCat({ display: "", order: "" });
+      loadCategories();
+      toast("success", "تمت إضافة الفئة");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast("error", data.error || "فشل إضافة الفئة");
+    }
+  }
+
+  function startEditCat(c: CatDTO) {
+    setEditingCatId(c.id);
+    setEditingCatData({ display: c.display, order: String(c.order) });
+  }
+
+  async function saveEditCat() {
+    if (!editingCatId) return;
+    const body: Record<string, unknown> = {};
+    if (editingCatData.display.trim()) body.display = editingCatData.display.trim();
+    if (editingCatData.order) body.order = parseInt(editingCatData.order, 10);
+    const res = await fetch(`/api/admin/categories/${editingCatId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (res.ok) {
+      setEditingCatId(null);
+      loadCategories();
+      toast("success", "تم حفظ الفئة");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast("error", data.error || "فشل الحفظ");
+    }
+  }
+
+  async function deleteCat(id: string) {
+    if (!confirm("هل أنت متأكد من حذف الفئة؟")) return;
+    const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
+    if (res.ok) { loadCategories(); toast("success", "تم حذف الفئة"); }
+    else { const data = await res.json().catch(() => ({})); toast("error", data.error || "فشل الحذف"); }
+  }
+
+  // Items
   const load = React.useCallback(async () => {
     setLoading(true);
     const qs = new URLSearchParams({ page: String(page), perPage: String(perPage) });
-    if (filters.category) qs.set("category", filters.category);
+    if (filters.categoryId) qs.set("categoryId", filters.categoryId);
     if (filters.minPrice) qs.set("minPrice", filters.minPrice);
     if (filters.maxPrice) qs.set("maxPrice", filters.maxPrice);
     if (filters.search) qs.set("search", filters.search);
@@ -324,6 +393,7 @@ function MenuPanel() {
   }
 
   async function createItem() {
+    if (!createForm.categoryId) { toast("error", "اختر فئة أولا"); return; }
     const imageUrl = (await maybeUpload(createForm.file)) || createForm.imageUrl;
     const payload = {
       name: createForm.name,
@@ -332,11 +402,11 @@ function MenuPanel() {
       currency: createForm.currency,
       imageUrl,
       available: createForm.available,
-      category: createForm.category,
+      categoryId: createForm.categoryId,
     };
     const res = await fetch("/api/admin/items", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     if (res.ok) {
-  setCreateForm({ name: "", price: "", currency: "JD", imageUrl: "", file: null, available: true, category: "MEALS" as Category, description: "" });
+      setCreateForm({ name: "", price: "", currency: "JD", imageUrl: "", file: null, available: true, categoryId: categories[0]?.id || "", description: "" });
       load();
       toast("success", "تم إنشاء العنصر");
     } else {
@@ -362,24 +432,103 @@ function MenuPanel() {
       if (up.ok) { const data = await up.json(); imageUrl = data.url; }
       else { toast("error", "فشل رفع الصورة"); return; }
     }
-    const res = await fetch(`/api/admin/items/${editItem.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editForm, imageUrl }) });
+    const body: Record<string, unknown> = { imageUrl };
+    if (editForm.name != null) body.name = editForm.name;
+    if (editForm.description != null) body.description = editForm.description;
+    if (typeof editForm.price === "number") body.price = editForm.price;
+    if (editForm.currency) body.currency = editForm.currency;
+    if (editForm.available != null) body.available = editForm.available;
+    if (editForm.categoryId) body.categoryId = editForm.categoryId;
+    const res = await fetch(`/api/admin/items/${editItem.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (res.ok) { setEditItem(null); setEditForm({}); load(); toast("success", "تم حفظ التعديل"); }
     else { const data = await res.json().catch(() => ({})); toast("error", data.error || "فشل حفظ التعديل"); }
   }
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h3 className="text-2xl font-extrabold">القائمة</h3>
-          <p className="text-[var(--muted)]">إدارة عناصر القائمة مع تصفية وترقيم الصفحات.</p>
+          <p className="text-[var(--muted)]">إدارة عناصر القائمة مع فئات ديناميكية.</p>
         </div>
-        <button className="btn h-10" onClick={() => setCreateOpen(v => !v)}>{createOpen ? "إخفاء إنشاء عنصر" : "إنشاء عنصر"}</button>
+        <div className="flex gap-2">
+          <button className="btn h-10" onClick={() => setCreateOpen(v => !v)} disabled={!categories.length}>{createOpen ? "إخفاء إنشاء عنصر" : "إنشاء عنصر"}</button>
+        </div>
       </header>
+
+      {/* Category Management */}
+      <div className="card p-5 rounded-[16px] elevate-md space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h4 className="text-lg font-extrabold">الفئات</h4>
+          <button className="btn ghost h-9" onClick={loadCategories} disabled={catLoading}>{catLoading ? "تحديث..." : "تحديث"}</button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="md:col-span-2 flex gap-2">
+            <input className="input flex-1" placeholder="اسم الفئة (عرض)" value={newCat.display} onChange={(e) => setNewCat({ ...newCat, display: e.target.value })} />
+            <input className="input w-24" placeholder="ترتيب" value={newCat.order} onChange={(e) => setNewCat({ ...newCat, order: e.target.value })} />
+            <button className="btn h-10" onClick={addCategory}>إضافة</button>
+          </div>
+          <div className="md:col-span-2 text-sm text-[var(--muted)] flex items-center">يمكنك ترتيب أو تعديل أسماء الفئات.</div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-[var(--muted)] text-xs">
+                <th className="p-2 text-start">الاسم</th>
+                <th className="p-2 text-start">الترتيب</th>
+                <th className="p-2 text-start">عناصر</th>
+                <th className="p-2 text-start">عروض خاصة</th>
+                <th className="p-2 text-start">عمليات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.map(c => (
+                <tr key={c.id} className="border-t border-[var(--border)]">
+                  <td className="p-2">
+                    {editingCatId === c.id ? (
+                      <input className="input w-full" value={editingCatData.display} onChange={(e) => setEditingCatData(ed => ({ ...ed, display: e.target.value }))} />
+                    ) : (
+                      <span className="font-medium">{c.display}</span>
+                    )}
+                  </td>
+                  <td className="p-2 w-28">
+                    {editingCatId === c.id ? (
+                      <input className="input w-full" value={editingCatData.order} onChange={(e) => setEditingCatData(ed => ({ ...ed, order: e.target.value }))} />
+                    ) : c.order}
+                  </td>
+                  <td className="p-2">{c.counts?.items ?? "—"}</td>
+                  <td className="p-2">{c.counts?.specialItems ?? "—"}</td>
+                  <td className="p-2 space-x-2 space-x-reverse">
+                    {editingCatId === c.id ? (
+                      <>
+                        <button className="btn ghost h-8" onClick={saveEditCat}>حفظ</button>
+                        <button className="btn ghost h-8" onClick={() => setEditingCatId(null)}>إلغاء</button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="btn ghost h-8" onClick={() => startEditCat(c)}>تعديل</button>
+                        <button className="btn ghost h-8" onClick={() => deleteCat(c.id)} disabled={(c.counts?.items || 0) > 0 || (c.counts?.specialItems || 0) > 0}>حذف</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {categories.length === 0 && (
+                <tr>
+                  <td className="p-3 text-center text-[var(--muted)]" colSpan={5}>{catLoading ? "جار التحميل..." : "لا توجد فئات بعد"}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {createOpen && (
         <div className="card p-5 rounded-[16px] elevate-md space-y-4">
           <h4 className="text-lg font-extrabold">عنصر جديد</h4>
+          {!categories.length && (
+            <div className="text-sm text-[var(--danger)]">قم بإنشاء فئة أولا.</div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm mb-1">الاسم</label>
@@ -395,11 +544,8 @@ function MenuPanel() {
             </div>
             <div>
               <label className="block text-sm mb-1">الفئة</label>
-              <select className="input w-full" value={createForm.category} onChange={(e) => setCreateForm({ ...createForm, category: e.target.value as Category })}>
-                <option value="MEALS">وجبات</option>
-                <option value="SNACKS">سناكات</option>
-                <option value="DESSERTS">حلويات</option>
-                <option value="DRINKS">مشروبات</option>
+              <select className="input w-full" value={createForm.categoryId} onChange={(e) => setCreateForm({ ...createForm, categoryId: e.target.value })}>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.display}</option>)}
               </select>
             </div>
             <div>
@@ -424,32 +570,26 @@ function MenuPanel() {
             </div>
           </div>
           <div className="flex justify-end">
-            <button className="btn h-10" onClick={createItem}>حفظ العنصر</button>
+            <button className="btn h-10" onClick={createItem} disabled={!categories.length}>حفظ العنصر</button>
           </div>
         </div>
       )}
 
       <div className="card p-5 rounded-[16px] elevate-md">
-        {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
           <input className="input w-full" placeholder="بحث بالاسم" value={filters.search || ""} onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })} />
-          <select className="input w-full" value={filters.category || ""} onChange={(e) => setFilters({ ...filters, category: (e.target.value || undefined) as Category | undefined })}>
+          <select className="input w-full" value={filters.categoryId || ""} onChange={(e) => setFilters({ ...filters, categoryId: (e.target.value || undefined) as string | undefined })}>
             <option value="">كل الفئات</option>
-            <option value="MEALS">وجبات</option>
-            <option value="SNACKS">سناكات</option>
-            <option value="DESSERTS">حلويات</option>
-            <option value="DRINKS">مشروبات</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.display}</option>)}
           </select>
           <input className="input w-full" type="number" step="0.01" inputMode="decimal" placeholder="أدنى سعر" value={filters.minPrice || ""} onChange={(e) => setFilters({ ...filters, minPrice: e.target.value || undefined })} />
-          <input className="input w-full" type="number" step="0.01" inputMode="decimal" placeholder="أعلى سعر" value={filters.maxPrice || ""} onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value || undefined })} />
+            <input className="input w-full" type="number" step="0.01" inputMode="decimal" placeholder="أعلى سعر" value={filters.maxPrice || ""} onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value || undefined })} />
           <select className="input w-full" value={String(perPage)} onChange={(e) => setPerPage(Number(e.target.value))}>
             <option value="10">10 / صفحة</option>
             <option value="20">20 / صفحة</option>
             <option value="50">50 / صفحة</option>
           </select>
         </div>
-
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -462,14 +602,14 @@ function MenuPanel() {
               </tr>
             </thead>
             <tbody>
-              {items.map((it) => (
+              {items.map(it => (
                 <tr key={it.id} className="border-t border-[var(--border)]">
                   <td className="p-2 font-medium">{it.name}</td>
-                  <td className="p-2">{translateCategory(it.category)}</td>
+                  <td className="p-2">{it.categoryName || "—"}</td>
                   <td className="p-2">{it.price} {it.currency}</td>
                   <td className="p-2">{it.available ? "متاح" : "غير متاح"}</td>
                   <td className="p-2 space-x-2 space-x-reverse">
-                    <button className="btn ghost h-8" onClick={() => { setEditItem(it); setEditForm(it); }}>تعديل</button>
+                    <button className="btn ghost h-8" onClick={() => { setEditItem(it); setEditForm({ ...it, categoryId: it.categoryId || undefined }); }}>تعديل</button>
                     <button className="btn ghost h-8" onClick={() => deleteItem(it.id)}>حذف</button>
                   </td>
                 </tr>
@@ -482,8 +622,6 @@ function MenuPanel() {
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-[var(--muted)]">الصفحة {page} من {totalPages}</div>
           <div className="space-x-2 space-x-reverse">
@@ -493,7 +631,6 @@ function MenuPanel() {
         </div>
       </div>
 
-      {/* Edit Drawer */}
       {editItem && (
         <div className="fixed inset-0 z-40">
           <div className="absolute inset-0 bg-black/40" onClick={() => setEditItem(null)} />
@@ -510,7 +647,7 @@ function MenuPanel() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm">السعر</label>
-                  <input className="input w-full" type="number" step="0.01" inputMode="decimal" value={String(editForm.price ?? "")} onChange={(e) => setEditForm({ ...editForm, price: parseFloat(e.target.value) })} />
+                  <input className="input w-full" type="number" step="0.01" inputMode="decimal" value={editForm.price != null ? String(editForm.price) : ""} onChange={(e) => setEditForm({ ...editForm, price: parseFloat(e.target.value) })} />
                 </div>
                 <div>
                   <label className="block text-sm">العملة</label>
@@ -518,11 +655,8 @@ function MenuPanel() {
                 </div>
               </div>
               <label className="block text-sm">الفئة</label>
-              <select className="input w-full" value={(editForm.category as Category) || "MEALS"} onChange={(e) => setEditForm({ ...editForm, category: e.target.value as Category })}>
-                <option value="MEALS">وجبات</option>
-                <option value="SNACKS">سناكات</option>
-                <option value="DESSERTS">حلويات</option>
-                <option value="DRINKS">مشروبات</option>
+              <select className="input w-full" value={editForm.categoryId || ""} onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.display}</option>)}
               </select>
               <label className="block text-sm">الصورة</label>
               <div className="flex items-center gap-3">
@@ -547,41 +681,43 @@ function MenuPanel() {
   );
 }
 
-function translateCategory(cat: Category) {
-  switch (cat) {
-    case "MEALS": return "وجبات";
-    case "SNACKS": return "سناكات";
-    case "DESSERTS": return "حلويات";
-    case "DRINKS": return "مشروبات";
-    default: return String(cat);
-  }
-}
 
-type SpecialItem = import("@prisma/client").SpecialItem;
+type SpecialItem = import("@prisma/client").SpecialItem & { categoryName?: string | null };
 type SpecialsResponse = { items: SpecialItem[]; total: number; page: number; perPage: number };
 
 function OffersPanel() {
+  const toast = useToast();
+  const [categories, setCategories] = useState<{ id: string; display: string }[]>([]);
   const [items, setItems] = useState<SpecialItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState<{ category?: Category; activeOnly?: boolean; search?: string }>({});
+  const [filters, setFilters] = useState<{ categoryId?: string; activeOnly?: boolean; search?: string }>({});
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", description: "", price: "", prevPrice: "", currency: "JD", imageUrl: "", file: null as File | null, available: true, category: "MEALS" as Category, dateFrom: "", dateTo: "" });
+  const [createForm, setCreateForm] = useState({ name: "", description: "", price: "", prevPrice: "", currency: "JD", imageUrl: "", file: null as File | null, available: true, categoryId: "", dateFrom: "", dateTo: "" });
   const [editItem, setEditItem] = useState<SpecialItem | null>(null);
-  const [editForm, setEditForm] = useState<Partial<SpecialItem> & { file?: File } >({});
-  const toast = useToast();
+  const [editForm, setEditForm] = useState<Partial<SpecialItem> & { file?: File; categoryId?: string }>({});
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / perPage)), [total, perPage]);
+
+  const loadCategories = React.useCallback(async () => {
+    const res = await fetch('/api/admin/categories', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      setCategories(data.categories);
+      setCreateForm(cf => ({ ...cf, categoryId: cf.categoryId || data.categories[0]?.id || '' }));
+    }
+  }, []);
+  useEffect(() => { loadCategories(); }, [loadCategories]);
 
   const load = React.useCallback(async () => {
     setLoading(true);
     const qs = new URLSearchParams({ page: String(page), perPage: String(perPage) });
-    if (filters.category) qs.set("category", filters.category);
-    if (filters.activeOnly) qs.set("activeOnly", "true");
-    if (filters.search) qs.set("search", filters.search);
-    const res = await fetch(`/api/admin/special-items?${qs.toString()}`, { cache: "no-store" });
+    if (filters.categoryId) qs.set('categoryId', filters.categoryId);
+    if (filters.activeOnly) qs.set('activeOnly', 'true');
+    if (filters.search) qs.set('search', filters.search);
+    const res = await fetch(`/api/admin/special-items?${qs.toString()}`, { cache: 'no-store' });
     setLoading(false);
     if (res.ok) {
       const data: SpecialsResponse = await res.json();
@@ -590,7 +726,7 @@ function OffersPanel() {
       setPage(data.page);
       setPerPage(data.perPage);
     } else {
-      toast("error", "فشل تحميل العروض");
+      toast('error', 'فشل تحميل العروض');
     }
   }, [page, perPage, filters, toast]);
 
@@ -609,6 +745,7 @@ function OffersPanel() {
   }
 
   async function createItem() {
+    if (!createForm.categoryId) { toast('error', 'اختر فئة'); return; }
     const imageUrl = (await maybeUpload(createForm.file)) || createForm.imageUrl;
     const payload = {
       name: createForm.name,
@@ -618,19 +755,19 @@ function OffersPanel() {
       currency: createForm.currency,
       imageUrl,
       available: createForm.available,
-      category: createForm.category,
+      categoryId: createForm.categoryId,
       dateFrom: createForm.dateFrom,
       dateTo: createForm.dateTo,
     };
-    const res = await fetch("/api/admin/special-items", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const res = await fetch('/api/admin/special-items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     if (res.ok) {
-      setCreateForm({ name: "", description: "", price: "", prevPrice: "", currency: "JD", imageUrl: "", file: null, available: true, category: "MEALS", dateFrom: "", dateTo: "" });
+      setCreateForm({ name: '', description: '', price: '', prevPrice: '', currency: 'JD', imageUrl: '', file: null, available: true, categoryId: categories[0]?.id || '', dateFrom: '', dateTo: '' });
       setCreateOpen(false);
       load();
-      toast("success", "تم إنشاء العرض الخاص");
+      toast('success', 'تم إنشاء العرض الخاص');
     } else {
       const data = await res.json().catch(() => ({}));
-      toast("error", data.error || "فشل إنشاء العرض");
+      toast('error', data.error || 'فشل إنشاء العرض');
     }
   }
 
@@ -647,21 +784,19 @@ function OffersPanel() {
       const uploaded = await maybeUpload(editForm.file);
       if (uploaded) imageUrl = uploaded;
     }
-    const body: Partial<SpecialItem> & { imageUrl: string } = {
-      imageUrl,
-      name: editForm.name,
-      description: editForm.description,
-      price: typeof editForm.price === "number" ? editForm.price : undefined,
-      prevPrice: typeof editForm.prevPrice === "number" ? editForm.prevPrice : undefined,
-      currency: editForm.currency,
-      category: editForm.category,
-      available: editForm.available,
-      dateFrom: editForm.dateFrom,
-      dateTo: editForm.dateTo,
-    };
-    const res = await fetch(`/api/admin/special-items/${editItem.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (res.ok) { setEditItem(null); setEditForm({}); load(); toast("success", "تم حفظ التعديل"); }
-    else { const data = await res.json().catch(() => ({})); toast("error", data.error || "فشل حفظ التعديل"); }
+    const body: Record<string, unknown> = { imageUrl };
+    if (editForm.name != null) body.name = editForm.name;
+    if (editForm.description != null) body.description = editForm.description;
+    if (typeof editForm.price === 'number') body.price = editForm.price;
+    if (typeof editForm.prevPrice === 'number') body.prevPrice = editForm.prevPrice;
+    if (editForm.currency) body.currency = editForm.currency;
+    if (editForm.available != null) body.available = editForm.available;
+    if (editForm.categoryId) body.categoryId = editForm.categoryId;
+    if (editForm.dateFrom) body.dateFrom = editForm.dateFrom;
+    if (editForm.dateTo) body.dateTo = editForm.dateTo;
+    const res = await fetch(`/api/admin/special-items/${editItem.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (res.ok) { setEditItem(null); setEditForm({}); load(); toast('success', 'تم حفظ التعديل'); }
+    else { const data = await res.json().catch(() => ({})); toast('error', data.error || 'فشل حفظ التعديل'); }
   }
 
   return (
@@ -700,11 +835,8 @@ function OffersPanel() {
             </div>
             <div>
               <label className="block text-sm mb-1">الفئة</label>
-              <select className="input w-full" value={createForm.category} onChange={(e) => setCreateForm({ ...createForm, category: e.target.value as Category })}>
-                <option value="MEALS">وجبات</option>
-                <option value="SNACKS">سناكات</option>
-                <option value="DESSERTS">حلويات</option>
-                <option value="DRINKS">مشروبات</option>
+              <select className="input w-full" value={createForm.categoryId} onChange={(e) => setCreateForm({ ...createForm, categoryId: e.target.value })}>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.display}</option>)}
               </select>
             </div>
             <div>
@@ -735,13 +867,10 @@ function OffersPanel() {
 
       <div className="card p-5 rounded-[16px] elevate-md">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
-          <input className="input w-full" placeholder="بحث بالعنوان" value={filters.search || ""} onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })} />
-          <select className="input w-full" value={filters.category || ""} onChange={(e) => setFilters({ ...filters, category: (e.target.value || undefined) as Category | undefined })}>
+          <input className="input w-full" placeholder="بحث بالعنوان" value={filters.search || ''} onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })} />
+          <select className="input w-full" value={filters.categoryId || ''} onChange={(e) => setFilters({ ...filters, categoryId: (e.target.value || undefined) as string | undefined })}>
             <option value="">كل الفئات</option>
-            <option value="MEALS">وجبات</option>
-            <option value="SNACKS">سناكات</option>
-            <option value="DESSERTS">حلويات</option>
-            <option value="DRINKS">مشروبات</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.display}</option>)}
           </select>
           <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={filters.activeOnly || false} onChange={(e) => setFilters({ ...filters, activeOnly: e.target.checked || undefined })} />فعال فقط</label>
           <select className="input w-full" value={String(perPage)} onChange={(e) => setPerPage(Number(e.target.value))}>
@@ -769,12 +898,12 @@ function OffersPanel() {
                 return (
                   <tr key={it.id} className="border-t border-[var(--border)]">
                     <td className="p-2 font-medium">{it.name}</td>
-                    <td className="p-2">{translateCategory(it.category)}</td>
+                    <td className="p-2">{it.categoryName || '—'}</td>
                     <td className="p-2"><span className="line-through text-[var(--muted)] mr-2">{it.prevPrice.toFixed(2)}</span> {it.price.toFixed(2)} {it.currency}</td>
                     <td className="p-2">{new Date(it.dateFrom).toLocaleDateString("ar-JO")} - {new Date(it.dateTo).toLocaleDateString("ar-JO")}</td>
                     <td className="p-2">{active ? "فعال" : "غير فعال"}</td>
                     <td className="p-2 space-x-2 space-x-reverse">
-                      <button className="btn ghost h-8" onClick={() => { setEditItem(it); setEditForm(it); }}>تعديل</button>
+                      <button className="btn ghost h-8" onClick={() => { setEditItem(it); setEditForm({ ...it, categoryId: it.categoryId || undefined }); }}>تعديل</button>
                       <button className="btn ghost h-8" onClick={() => deleteItem(it.id)}>حذف</button>
                     </td>
                   </tr>
@@ -782,7 +911,7 @@ function OffersPanel() {
               })}
               {items.length === 0 && (
                 <tr>
-                  <td className="p-4 text-center text-[var(--muted)]" colSpan={6}>{loading ? "جار التحميل..." : "لا توجد عروض"}</td>
+                  <td className="p-3 text-center text-[var(--muted)]" colSpan={6}>{loading ? "جار التحميل..." : "لا توجد عروض"}</td>
                 </tr>
               )}
             </tbody>
@@ -824,11 +953,8 @@ function OffersPanel() {
               <label className="block text-sm">العملة</label>
               <input className="input w-full" value={editForm.currency || "JD"} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })} />
               <label className="block text-sm">الفئة</label>
-              <select className="input w-full" value={(editForm.category as Category) || "MEALS"} onChange={(e) => setEditForm({ ...editForm, category: e.target.value as Category })}>
-                <option value="MEALS">وجبات</option>
-                <option value="SNACKS">سناكات</option>
-                <option value="DESSERTS">حلويات</option>
-                <option value="DRINKS">مشروبات</option>
+              <select className="input w-full" value={editForm.categoryId || ''} onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.display}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-3">
                 <div>

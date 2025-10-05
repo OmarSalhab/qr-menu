@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/server-auth";
 import { isR2PublicUrl, keyFromPublicUrl, deleteFromR2 } from "@/lib/r2";
-import type { Category, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 // PATCH /api/admin/special-items/[id]
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -11,6 +11,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json();
     const { id } = await params;
   const data: Prisma.SpecialItemUpdateInput = {};
+  // Will hold unchecked scalar updates (like categoryId) separately
+  const unchecked: Prisma.SpecialItemUncheckedUpdateInput = {};
     if ("name" in body) data.name = String(body.name);
     if ("description" in body) data.description = body.description ? String(body.description) : null;
     if ("price" in body) { const p = parseFloat(String(body.price)); if (Number.isFinite(p)) data.price = p; }
@@ -18,17 +20,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if ("currency" in body) data.currency = String(body.currency || "JD");
     if ("imageUrl" in body) data.imageUrl = String(body.imageUrl || "");
     if ("available" in body) data.available = Boolean(body.available);
-    if ("category" in body) data.category = String(body.category) as Category;
+    if ("categoryId" in body) {
+      const categoryId = body.categoryId ? String(body.categoryId) : "";
+      if (categoryId) {
+        const cat = await prisma.categoryModel.findFirst({ where: { id: categoryId, storeId } });
+        if (!cat) return NextResponse.json({ error: "الفئة غير موجودة" }, { status: 400 });
+        unchecked.categoryId = categoryId;
+        data.category = 'MEALS'; // legacy enum placeholder
+      }
+    }
     if ("dateFrom" in body) { const d = new Date(String(body.dateFrom)); if (!isNaN(d.getTime())) data.dateFrom = d; }
     if ("dateTo" in body) { const d = new Date(String(body.dateTo)); if (!isNaN(d.getTime())) data.dateTo = d; }
 
     const existing = await prisma.specialItem.findUnique({ where: { id, storeId } });
-    const updated = await prisma.specialItem.update({ where: { id, storeId }, data });
+  const merged = { ...(data as Record<string, unknown>), ...(unchecked as Record<string, unknown>) } as Prisma.SpecialItemUncheckedUpdateInput;
+  const updated = await prisma.specialItem.update({ where: { id, storeId }, data: merged, include: { categoryRef: true } });
     if (existing?.imageUrl && updated.imageUrl !== existing.imageUrl && isR2PublicUrl(existing.imageUrl)) {
       const key = keyFromPublicUrl(existing.imageUrl);
       if (key) await deleteFromR2(key);
     }
-    return NextResponse.json({ item: updated });
+  return NextResponse.json({ item: { ...updated, categoryName: updated.categoryRef?.display || null } });
   } catch (e: unknown) {
     if (typeof e === "object" && e && "code" in e && (e as { code?: string }).code === "P2025")
       return NextResponse.json({ error: "العنصر غير موجود" }, { status: 404 });

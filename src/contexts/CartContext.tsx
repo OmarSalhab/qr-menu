@@ -1,11 +1,21 @@
 "use client";
 import React from "react";
-import { menuItems as defaultItems, type MenuItem } from "@/data/menu";
+import { menuItems as defaultItems } from "@/data/menu";
+
+// Allow dynamic items coming from DB (subset compatible with StaticMenuItem but description may be null)
+export type CartMenuItem = {
+  id: string;
+  name: string;
+  price: number;
+  currency?: string | null;
+  imageUrl: string;
+  available?: boolean | null;
+};
 
 export type CartLine = { id: string; qty: number };
 
 type CartState = {
-  items: MenuItem[];
+  items: CartMenuItem[];
   lines: CartLine[];
   people: number;
   isOpen: boolean;
@@ -26,7 +36,7 @@ type CartContextValue = CartState & {
 
 const CartContext = React.createContext<CartContextValue | null>(null);
 
-export function CartProvider({ children, items = defaultItems }: { children: React.ReactNode; items?: MenuItem[] }) {
+export function CartProvider({ children, items = defaultItems as unknown as CartMenuItem[] }: { children: React.ReactNode; items?: CartMenuItem[] }) {
   const [lines, setLines] = React.useState<CartLine[]>([]);
   const [people, setPeople] = React.useState(1);
   const [isOpen, setOpen] = React.useState(false);

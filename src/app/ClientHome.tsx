@@ -7,8 +7,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import DeliveryBanner from "@/components/client/DeliveryBanner";
 import BranchSelector from "@/components/client/BranchSelector";
 import RatingCard from "@/components/client/RatingCard";
-import MenuList from "@/components/client/MenuList";
-import { categories, type MenuCategory, type MenuItem } from "@/data/menu";
+import MenuList, { type DynamicCategory, type DynamicMenuItem } from "@/components/client/MenuList";
 import { CartProvider, useCart } from "@/contexts/CartContext";
 import WorkingHours from "@/components/client/WorkingHours";
 import type { WorkingHours as WH } from "@/lib/working-hours";
@@ -44,13 +43,13 @@ type SpecialUi = {
   prevPrice: number;
   currency: string;
   imageUrl: string;
-  category: MenuCategory;
+  categoryId: string | null;
   dateFrom: string; // ISO
   dateTo: string;   // ISO
 };
 
-function SpecialOffers({ specials, activeCategory }: { specials: SpecialUi[]; activeCategory: MenuCategory }) {
-  const filtered = specials.filter((s) => s.category === activeCategory);
+function SpecialOffers({ specials, activeCategoryId }: { specials: SpecialUi[]; activeCategoryId: string }) {
+  const filtered = specials.filter((s) => s.categoryId === activeCategoryId);
   if (filtered.length === 0) return null;
   return (
     <section className="px-5 mt-4">
@@ -102,9 +101,11 @@ function FloatingCartButton() {
   );
 }
 
-function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite; specials: SpecialUi[] }) {
+function Inner({ items, store, specials, categories }: { items: DynamicMenuItem[]; store: StoreLite; specials: SpecialUi[]; categories: DynamicCategory[] }) {
   const [open, setOpen] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<MenuCategory>("الوجبات");
+  const firstCategoryId = React.useMemo(() => (categories && categories.length > 0 ? categories[0].id : ""), [categories]);
+  const [activeTab, setActiveTab] = React.useState<string>(firstCategoryId);
+  React.useEffect(() => { if (!activeTab && firstCategoryId) setActiveTab(firstCategoryId); }, [firstCategoryId, activeTab]);
   const [showWorkingHours, setShowWorkingHours] = React.useState(false);
   return (
     <main className="mx-auto max-w-screen-sm rtl">
@@ -118,17 +119,21 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
       />
 
       <div className="px-5 pt-3">
-        <div className="grid grid-cols-4 text-center text-md text-[var(--muted)]">
-          {categories.map((c) => (
-            <button
-              key={c}
-              className={`py-3 border-b-4 ${activeTab === c ? "border-[var(--brand-600)] text-[var(--text)] font-bold" : "border-transparent"}`}
-              onClick={() => setActiveTab(c)}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
+        {categories.length > 0 ? (
+          <div className="grid grid-cols-4 text-center text-md text-[var(--muted)]">
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                className={`py-3 border-b-4 ${activeTab === c.id ? "border-[var(--brand-600)] text-[var(--text)] font-bold" : "border-transparent"}`}
+                onClick={() => setActiveTab(c.id)}
+              >
+                {c.display}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-sm text-[var(--muted)] py-6">لا توجد فئات بعد</div>
+        )}
       </div>
 
       <DeliveryBanner />
@@ -136,9 +141,9 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
   <RatingCard />
 
   {/* Special offers under review, above menu items */}
-  <SpecialOffers specials={specials} activeCategory={activeTab} />
+  {activeTab && <SpecialOffers specials={specials} activeCategoryId={activeTab} />}
 
-      <MenuList activeCategory={activeTab} items={items} />
+  <MenuList activeCategoryId={activeTab || "all"} items={items} categories={categories} />
 
       <Sidebar
         open={open}
@@ -256,10 +261,10 @@ function Inner({ items, store, specials }: { items: MenuItem[]; store: StoreLite
   );
 }
 
-export default function ClientHome({ items, store, specials }: { items: MenuItem[]; store: StoreLite; specials: SpecialUi[] }) {
+export default function ClientHome({ items, store, specials, categories }: { items: DynamicMenuItem[]; store: StoreLite; specials: SpecialUi[]; categories: DynamicCategory[] }) {
   return (
-    <CartProvider items={items}>
-      <Inner items={items} store={store} specials={specials} />
+  <CartProvider items={items.map(i => ({ id: i.id, name: i.name, price: i.price, currency: i.currency || 'JD', imageUrl: i.imageUrl, available: i.available !== false }))}>
+      <Inner items={items} store={store} specials={specials} categories={categories} />
     </CartProvider>
   );
 }
