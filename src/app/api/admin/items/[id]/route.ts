@@ -10,7 +10,7 @@ export async function PATCH(_req: Request, { params }: { params: Promise<{ id: s
     const { sub: storeId } = await requireAdminSession();
     const body = await _req.json();
     const { id } = await params;
-    const data: Prisma.ItemUpdateInput = {};
+  const data: Prisma.ItemUncheckedUpdateInput = {};
     const existing = await prisma.item.findUnique({ where: { id, storeId } });
     if ("name" in body) data.name = String(body.name);
     if ("description" in body) data.description = body.description ? String(body.description) : null;
@@ -26,12 +26,10 @@ export async function PATCH(_req: Request, { params }: { params: Promise<{ id: s
       if (categoryId) {
         const cat = await prisma.categoryModel.findFirst({ where: { id: categoryId, storeId } });
         if (!cat) return NextResponse.json({ error: "الفئة غير موجودة" }, { status: 400 });
-        data.categoryId = categoryId;
-        // Keep legacy enum stable placeholder until removed.
-        data.category = 'MEALS';
+  data.categoryId = categoryId;
       }
     }
-    const updated = await prisma.item.update({ where: { id, storeId }, data, include: { categoryRef: true } });
+  const updated = await prisma.item.update({ where: { id, storeId }, data, include: { categoryRef: true } });
     // If image changed, delete old R2 image to avoid orphaned files
     if (existing?.imageUrl && updated.imageUrl !== existing.imageUrl && isR2PublicUrl(existing.imageUrl)) {
       const key = keyFromPublicUrl(existing.imageUrl);
