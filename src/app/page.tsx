@@ -3,12 +3,20 @@ export const dynamic = "force-dynamic";
 import ClientHome from "./ClientHome";
 import { defaultWorkingHours, type WorkingHours } from "@/lib/working-hours";
 
+type MenuItemUi = { id: string; name: string; description?: string; price: number; currency?: string; imageUrl: string; available: boolean; categoryId: string | null };
+type SpecialUi = { id: string; name: string; description?: string; price: number; prevPrice: number; currency: string; imageUrl: string; categoryId: string | null; dateFrom: string; dateTo: string };
+type CategoryUi = { id: string; display: string };
+type StoreLite = {
+  name: string; description?: string | null; bannerUrl?: string | null; logoUrl?: string | null; brandColor?: string | null; timezone?: string; workingHours: WorkingHours;
+  googleReviewsUrl?: string | null; instagramUrl?: string | null; whatsappUrl?: string | null; xUrl?: string | null; facebookUrl?: string | null; googleMapsUrl?: string | null; phone?: string | null; email?: string | null; website?: string | null;
+};
+
 export default async function Home() {
   let store = null;
   // Use optional description/currency for alignment with client component expectations
-  let items: Array<{ id: string; name: string; description?: string; price: number; currency?: string; imageUrl: string; available: boolean; categoryId: string | null; }> = [];
-  let specials: Array<{ id: string; name: string; description?: string; price: number; prevPrice: number; currency?: string; imageUrl: string; categoryId: string | null; dateFrom: string; dateTo: string; }> = [];
-  let categories: Array<{ id: string; display: string }> = [];
+  let items: MenuItemUi[] = [];
+  let specials: SpecialUi[] = [];
+  let categories: CategoryUi[] = [];
   try {
     store = await prisma.store.findFirst();
     const dbItems = await prisma.item.findMany({
@@ -70,7 +78,7 @@ export default async function Home() {
     website?: string | null;
   } | null;
 
-  const storeLite = {
+  const storeLite: StoreLite = {
     name: store?.name || "مطعم تجريبي",
     description: store?.description || "طعم لا يعلى عليه",
     bannerUrl: store?.bannerUrl || undefined,
@@ -92,7 +100,7 @@ export default async function Home() {
 
   return (
     <div>
-  <ClientHome items={items} store={storeLite} specials={specials as any} categories={categories} />
+      <ClientHome items={items} store={storeLite} specials={specials} categories={categories} />
     </div>
   );
 }

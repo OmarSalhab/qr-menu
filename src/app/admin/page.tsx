@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { WorkingHours as WH } from "@/lib/working-hours";
 import { useRouter } from "next/navigation";
-import type { Category, Item, Store } from "@prisma/client";
+import type { Item, Store } from "@prisma/client";
 import { useToast } from "@/components/ui/Toast";
 
 type TabKey = "theme" | "menu" | "offers";
